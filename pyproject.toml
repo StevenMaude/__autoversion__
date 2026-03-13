@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoversion"
+version = "2.0.0"
+description = "Obtain installed version of package automatically, even if it is installed editable."
+readme = { file = "README", content-type = "text/plain" }
+license = { text = "MIT" }
+authors = [{ name = "Peter Waller", email = "p@pwaller.net" }]
+keywords = ["autoversion", "__autoversion__", "__version__", "__version__tuple__", "version", "git"]
+classifiers = [
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
+requires-python = ">=3.10"
+
+[project.urls]
+Homepage = "https://github.com/StevenMaude/__autoversion__"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.11.0",
+]
+
+[tool.setuptools]
+py-modules = ["__autoversion__"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]

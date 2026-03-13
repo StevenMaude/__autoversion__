@@ -2,7 +2,7 @@
 ==========================================
 
 Automatically obtain the version number of the importer, retrieving it from
-pkg_resources or source control if necessary.
+installed package metadata or source control if necessary.
 
 Example:
 
@@ -12,3 +12,10 @@ Example:
 Current support:
 
 - Git
+
+Development:
+
+- `python -m pip install -e .[dev]`
+- `python -m ruff check .`
+- `python -m ruff format --check .`
+- `python -m pytest`

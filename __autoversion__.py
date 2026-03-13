@@ -1,37 +1,26 @@
 """
-Automatically determine the version of the importer through ``pkg_resources``
-or version control if installed with ``pip install --editable` or
-``setup.py develop``
+Automatically determine the version of the importer through package metadata
+or version control if installed with ``pip install --editable``.
 """
-
 
 import os
 import re
 import subprocess
 import sys
-
+from importlib import metadata
 from inspect import getmodule
 from itertools import groupby
-
-try:
-    from pkg_resources import DistributionNotFound, get_distribution, parse_version
-except ImportError:
-    have_setuptools = False
-else:
-    have_setuptools = True
-
 
 orig = sys.modules[__name__]
 
 
 class Git:
-
     @classmethod
     def get_branch(cls, path):
         return (
-            subprocess
-            .check_output("git rev-parse --abbrev-ref HEAD",
-                          shell=True, cwd=path)
+            subprocess.check_output(
+                "git rev-parse --abbrev-ref HEAD", shell=True, cwd=path
+            )
             .strip()
             .decode("utf-8")
         )
@@ -45,14 +34,18 @@ class Git:
         (Note: memoizes the result in the ``memo`` parameter)
         """
         if path not in memo:
-            memo[path] = subprocess.check_output(
-                "git describe --tags --dirty 2> /dev/null",
-                shell=True, cwd=path).strip().decode("utf-8")
+            memo[path] = (
+                subprocess.check_output(
+                    "git describe --tags --dirty 2> /dev/null", shell=True, cwd=path
+                )
+                .strip()
+                .decode("utf-8")
+            )
 
             v = re.search("-[0-9]+-", memo[path])
             if v is not None:
                 # Replace -n- with -branchname-n-
-                branch = fr"-{cls.get_branch(path)}-\1-"
+                branch = rf"-{cls.get_branch(path)}-\1-"
                 (memo[path], _) = re.subn("-([0-9]+)-", branch, memo[path], 1)
 
         return memo[path]
@@ -72,6 +65,7 @@ class Git:
             # Git unavailable?
             return False
 
+
 repo_types = [Git]
 
 
@@ -90,14 +84,16 @@ def getversion(package):
     Obtain the ``__version__`` for ``package``, looking at the egg information
     or the source repository's version control if necessary.
     """
-    distribution = get_distribution(package)
-    if distribution is None:
-        raise RuntimeError(f"Can't find distribution {package}")
-    repo_type = get_repo_type(distribution.location)
+    try:
+        distribution = metadata.distribution(package)
+    except metadata.PackageNotFoundError as exc:
+        raise RuntimeError(f"Can't find distribution {package}") from exc
+    location = str(distribution.locate_file(""))
+    repo_type = get_repo_type(location)
     if repo_type is None:
         return distribution.version
 
-    return repo_type.get_version(distribution.location)
+    return repo_type.get_version(location)
 
 
 def version_from_frame(frame):
@@ -119,8 +115,8 @@ def version_from_frame(frame):
 
     while True:
         try:
-            get_distribution(module_name)
-        except DistributionNotFound:
+            metadata.version(module_name)
+        except metadata.PackageNotFoundError:
             # Look at what's to the left of "."
             module_name, dot, _ = module_name.partition(".")
             if dot == "":
@@ -166,21 +162,18 @@ def tupleize_version(version):
     # Put the tuples in groups by "-"
     def is_dash(s):
         return s == "-"
+
     grouped = groupby(parsed, is_dash)
 
     return tuple(tuple(group) for dash, group in grouped if not dash)
 
 
 class Module(type(orig)):
-
     @property
     def __version__(self):
         """
         Obtain the __version__ of the module of the requestor
         """
-        if not have_setuptools:
-            return "unknown-no-setuptools"
-
         prev_frame = sys._getframe(1)
         return version_from_frame(prev_frame)
 
@@ -190,14 +183,12 @@ class Module(type(orig)):
         Returns a lexicographically comparable tuple representing the version
         of the requestor
         """
-        if not have_setuptools:
-            return ("unknown", "no-setuptools")
-
         prev_frame = sys._getframe(1)
         return tupleize_version(version_from_frame(prev_frame))
 
     def __getattr__(self, key):
         return getattr(orig, key)
+
 
 module = Module(__name__)
 module.__file__ = orig.__file__
